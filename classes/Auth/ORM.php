@@ -90,6 +90,8 @@ class ORM extends Auth
      * @param boolean $remember     enable auto login
      *
      * @return  boolean
+     *
+     * @throws \Modseven\Auth\Exception
      */
     protected function _login($user, string $password, bool $remember)
     {
@@ -300,6 +302,8 @@ class ORM extends Auth
      * @param string $password
      *
      * @return  boolean
+     *
+     * @throws \Modseven\Auth\Exception
      */
     public function check_password(string $password) : bool
     {

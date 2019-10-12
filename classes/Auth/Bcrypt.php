@@ -254,7 +254,7 @@ class Bcrypt extends Auth
     /**
      * @inheritdoc
      */
-    public function hash($str)
+    public function hash(string $str) : string
     {
         return password_hash($str, PASSWORD_BCRYPT, [
             'cost' => $this->_config['cost']
