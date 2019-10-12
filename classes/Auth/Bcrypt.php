@@ -4,16 +4,22 @@
  *
  * @copyright  (c) 2007-2016  Kohana Team
  * @copyright  (c) since 2016 Koseven Team
- * @license    http:/koseven.ga/license
+ * @license        http:/koseven.ga/license
  */
 
 namespace Modseven\ORM\Auth;
 
 use KO7\Cookie;
-use \Modseven\ORM\Auth;
-use Modseven\ORM\Exception;
 
-class Bcrypt extends  \KO7\Auth {
+use Ko7\Request;
+use Modseven\Auth\Auth;
+use Modseven\ORM\Exception;
+use Modseven\ORM\Model\User;
+use Modseven\ORM\Model\Role;
+use Modseven\ORM\Model\User\Token;
+
+class Bcrypt extends Auth
+{
 
     /**
      * Bcrypt Auth constructor.
@@ -22,7 +28,7 @@ class Bcrypt extends  \KO7\Auth {
      *
      * @throws Exception
      */
-    public function __construct($config = [])
+    public function __construct(array $config = [])
     {
         if ( ! isset($config['cost']) || ! is_numeric($config['cost']) || $config['cost'] < 10)
         {
@@ -41,11 +47,11 @@ class Bcrypt extends  \KO7\Auth {
         if ($token = Cookie::get('authautologin'))
         {
             // Load the token and user
-            $token = ORM::factory('User_Token', ['token' => $token]);
+            $token = \Modseven\ORM\ORM::factory(Token::class, ['token' => $token]);
 
-            if ($token->loaded() AND $token->user->loaded())
+            if ($token->loaded() && $token->user->loaded())
             {
-                if ($token->user_agent === hash('sha256', Request::$user_agent))
+                if (hash_equals($token->user_agent, hash('sha256', Request::$user_agent)))
                 {
                     // Save the token to create a new unique token
                     $token->save();
@@ -65,25 +71,25 @@ class Bcrypt extends  \KO7\Auth {
             }
         }
 
-        return FALSE;
+        return false;
     }
 
     /**
      * Gets the currently logged in user from the session (with auto_login check).
      * Returns $default if no user is currently logged in.
      *
-     * @param   mixed    $default to return in case user isn't logged in
+     * @param mixed $default to return in case user isn't logged in
+     *
      * @return  mixed
      */
-    public function get_user($default = NULL)
+    public function get_user($default = null)
     {
         $user = parent::get_user($default);
 
-        if ($user === $default)
+        // check for "remembered" login
+        if (($user === $default) && ($user = $this->auto_login()) === false)
         {
-            // check for "remembered" login
-            if (($user = $this->auto_login()) === FALSE)
-                return $default;
+            return $default;
         }
 
         return $user;
@@ -92,11 +98,12 @@ class Bcrypt extends  \KO7\Auth {
     /**
      * Log a user out and remove any autologin cookies.
      *
-     * @param   boolean  $destroy     completely destroy the session
-     * @param	boolean  $logout_all  remove all tokens for user
+     * @param boolean $destroy    completely destroy the session
+     * @param boolean $logout_all remove all tokens for user
+     *
      * @return  boolean
      */
-    public function logout($destroy = FALSE, $logout_all = FALSE)
+    public function logout(bool $destroy = false, bool $logout_all = false) : bool
     {
         // Set by force_login()
         $this->_session->delete('auth_forced');
@@ -107,12 +114,12 @@ class Bcrypt extends  \KO7\Auth {
             Cookie::delete('authautologin');
 
             // Clear the autologin token from the database
-            $token = ORM::factory('User_Token', ['token' => $token]);
+            $token = \Modseven\ORM\ORM::factory(Token::class, ['token' => $token]);
 
-            if ($token->loaded() AND $logout_all)
+            if ($logout_all && $token->loaded())
             {
                 // Delete all user tokens. This isn't the most elegant solution but does the job
-                $tokens = ORM::factory('User_Token')->where('user_id', '=', $token->user_id)->find_all();
+                $tokens = \Modseven\ORM\ORM::factory(Token::class)->where('user_id', '=', $token->user_id)->find_all();
 
                 foreach ($tokens as $_token)
                 {
@@ -130,38 +137,34 @@ class Bcrypt extends  \KO7\Auth {
 
     /**
      * Performs login on user
+     *
      * @param string $username Username
      * @param string $password Password
-     * @param bool $remember Remembers login
+     * @param bool   $remember Remembers login
+     *
      * @return boolean
-     * @throws KO7_Exception
      */
-    protected function _login($username, $password, $remember = FALSE)
+    protected function _login(string $username, string $password, bool $remember = false) : bool
     {
-        if ( ! is_string($username) OR ! is_string($password) OR ! is_bool($remember))
-        {
-            throw new KO7_Exception('Username and password must be strings, remember must be bool');
-        }
-
         // Load the user
-        $user = ORM::factory('User');
+        $user = \Modseven\ORM\ORM::factory(User::class);
         $user->where($user->unique_key($username), '=', $username)->find();
 
-        if ($user->loaded() AND $user->has('roles', ORM::factory('Role', ['name' => 'login'])) AND password_verify($password, $user->password))
+        if ($user->loaded() && password_verify($password, $user->password) && $user->has('roles', \Modseven\ORM\ORM::factory(Role::class, ['name' => 'login'])))
         {
-            if ($remember === TRUE)
+            if ($remember === true)
             {
                 // Token data
                 $data = [
-                    'user_id' => $user->pk(),
-                    'expires' => time() + $this->_config['lifetime'],
+                    'user_id'    => $user->pk(),
+                    'expires'    => time() + $this->_config['lifetime'],
                     'user_agent' => hash('sha256', Request::$user_agent),
                 ];
 
                 // Create a new autologin token
-                $token = ORM::factory('User_Token')
-                        ->values($data)
-                        ->create();
+                $token = \Modseven\ORM\ORM::factory(Token::class)
+                            ->values($data)
+                            ->create();
 
                 // Set the autologin cookie
                 Cookie::set('authautologin', $token->token, $this->_config['lifetime']);
@@ -170,25 +173,25 @@ class Bcrypt extends  \KO7\Auth {
             $this->complete_login($user);
             $user->complete_login();
 
-            if (password_needs_rehash($user->password, PASSWORD_BCRYPT, ['cost' => $this->_config['cost']]))
-            {
+            if (password_needs_rehash($user->password, PASSWORD_BCRYPT, ['cost' => $this->_config['cost']])) {
                 $user->password = $password;
                 $user->save();
             }
 
-            return TRUE;
+            return true;
         }
 
-        return FALSE;
+        return false;
     }
 
     /**
-	 * Compare password with original (hashed). Works for current (logged in) user
-	 *
-	 * @param   string  $password
-	 * @return  boolean
-	 */
-    public function check_password($password)
+     * Compare password with original (hashed). Works for current (logged in) user
+     *
+     * @param string $password
+     *
+     * @return  bool
+     */
+    public function check_password(string $password) : bool
     {
         $user = $this->get_user();
 
@@ -203,17 +206,18 @@ class Bcrypt extends  \KO7\Auth {
     /**
      * Get the stored password for a username.
      *
-     * @param   mixed   $user  username string, or user ORM object
+     * @param mixed $user username string, or user ORM object
+     *
      * @return  string
      */
-    public function password($user)
+    public function password($user) : string
     {
         if ( ! is_object($user))
         {
             $username = $user;
 
             // Load the user
-            $user = ORM::factory('User');
+            $user = \Modseven\ORM\ORM::factory(User::class);
             $user->where($user->unique_key($username), '=', $username)->find();
         }
 
@@ -223,25 +227,24 @@ class Bcrypt extends  \KO7\Auth {
     /**
      * Forces a user to be logged in, without specifying a password.
      *
-     * @param   mixed    $user                    username string, or user ORM object
-     * @param   boolean  $mark_session_as_forced  mark the session as forced
-     * @return  boolean
+     * @param mixed   $user                   username string, or user ORM object
+     * @param boolean $mark_session_as_forced mark the session as forced
      */
-    public function force_login($user, $mark_session_as_forced = FALSE)
+    public function force_login($user, bool $mark_session_as_forced = false) : void
     {
         if ( ! is_object($user))
         {
             $username = $user;
 
             // Load the user
-            $user = ORM::factory('User');
+            $user = \Modseven\ORM\ORM::factory(User::class);
             $user->where($user->unique_key($username), '=', $username)->find();
         }
 
-        if ($mark_session_as_forced === TRUE)
+        if ($mark_session_as_forced === true)
         {
             // Mark the session as forced, to prevent users from changing account information
-            $this->_session->set('auth_forced', TRUE);
+            $this->_session->set('auth_forced', true);
         }
 
         // Run the standard completion

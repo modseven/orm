@@ -275,9 +275,6 @@ class ORM extends Model implements serializable
      */
     public static function factory(string $model, $id = null): Model
     {
-        // Set class name
-        $model = 'Model_' . $model;
-
         return new $model($id);
     }
 

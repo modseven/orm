@@ -1,123 +1,151 @@
 <?php
 /**
- * @package        KO7/ORM
- * even Team
+ * Guid Behavior Class
+ *
  * @copyright  (c) 2016-2018 Koseven Team
  * @license        https://koseven.ga/LICENSE
  */
-class ORM_Behavior_Guid extends ORM_Behavior {
 
-	/**
-	 * Table column for GUID value
-	 * @var string
-	 */
-	protected $_guid_column = 'guid';
+namespace Modseven\ORM\Behavior;
 
-	/**
-	 * Allow model creat on on guid key only
-	 * @var boolean
-	 */
-	protected $_guid_only = TRUE;
+use KO7\Arr;
+use KO7\Log;
 
-	/**
-	 * Verify GUID
-	 * @var boolean
-	 */
-	protected $_guid_verify = FALSE;
+use Modseven\ORM\ORM;
+use Modseven\ORM\UUID;
+use Modseven\ORM\Behavior;
+use Modseven\ORM\Exception;
+use Modseven\Database\DB;
 
-	/**
-	 * Constructs a behavior object
-	 *
-	 * @param   array $config Configuration parameters
-	 */
-	protected function __construct($config)
-	{
-		parent::__construct($config);
+class Guid extends Behavior
+{
+    /**
+     * Table column for GUID value
+     * @var string
+     */
+    protected string $_guid_column = 'guid';
 
-		$this->_guid_column = Arr::get($config, 'column', $this->_guid_column);
-		$this->_guid_only = Arr::get($config, 'guid_only', $this->_guid_only);
-		$this->_guid_verify = Arr::get($config, 'verify', $this->_guid_verify);
-	}
+    /**
+     * Allow model creat on on guid key only
+     * @var boolean
+     */
+    protected bool $_guid_only = true;
 
-	/**
-	 * Constructs a new model and loads a record if given
-	 *
-	 * @param   ORM   $model The model
-	 * @param   mixed $id    Parameter for find or object to load
-	 *
-	 * @return bool
-	 * @throws KO7_Exception
-	 */
-	public function on_construct($model, $id) : bool
-	{
-		if (($id !== NULL) && ! is_array($id) && ! ctype_digit($id)) {
-			if ( ! UUID:: valid($id)) {
-				throw new KO7_Exception('Invalid UUID: :id', [':id' => $id]);
-			}
-			$model->where($this->_guid_column, '=', $id)->find();
+    /**
+     * Verify GUID
+     * @var boolean
+     */
+    protected bool $_guid_verify = false;
 
-			// Prevent further record loading
-			return FALSE;
-		}
+    /**
+     * Constructs a behavior object
+     *
+     * @param array $config Configuration parameters
+     */
+    protected function __construct(array $config)
+    {
+        parent::__construct($config);
 
-		return TRUE;
-	}
+        $this->_guid_column = Arr::get($config, 'column', $this->_guid_column);
+        $this->_guid_only = Arr::get($config, 'guid_only', $this->_guid_only);
+        $this->_guid_verify = Arr::get($config, 'verify', $this->_guid_verify);
+    }
 
-	/**
-	 * The model is updated, add a guid value if empty
-	 *
-	 * @param   ORM $model The model
-	 *
-	 * @throws Exception
-	 */
-	public function on_update($model)
-	{
-		$this->create_guid($model);
-	}
+    /**
+     * Constructs a new model and loads a record if given
+     *
+     * @param ORM $model The model
+     * @param mixed             $id    Parameter for find or object to load
+     *
+     * @return bool
+     *
+     * @throws Exception
+     */
+    public function on_construct($model, $id): bool
+    {
+        if (($id !== null) && ! is_array($id) && ! ctype_digit($id))
+        {
+            if ( ! UUID:: valid($id))
+            {
+                throw new Exception('Invalid UUID: :id', [':id' => $id]);
+            }
+            $model->where($this->_guid_column, '=', $id)->find();
 
-	/**
-	 * Create GUUID
-	 *
-	 * @param $model	Model to generate GUID for
-	 *
-	 * @throws Exception
-	 */
-	private function create_guid($model)
-	{
-		if ($this->_guid_verify === FALSE)
-		{
-			$model->set($this->_guid_column, UUID::v4());
-			return;
-		}
+            // Prevent further record loading
+            return false;
+        }
 
-		$current_guid = $model->get($this->_guid_column);
+        return true;
+    }
 
-		// Try to create a new GUID
-		$query = DB::select()->from($model->table_name())
-			->where($this->_guid_column, '=', ':guid')
-			->limit(1);
+    /**
+     * The model is updated, add a guid value if empty
+     *
+     * @param ORM $model The model
+     *
+     * @throws Exception
+     */
+    public function on_update($model) : void
+    {
+        $this->create_guid($model);
+    }
 
-		while (empty($current_guid)) {
-			$current_guid = UUID::v4();
+    /**
+     * Create GUID
+     *
+     * @param ORM $model    Model to generate GUID for
+     *
+     * @throws Exception
+     */
+    private function create_guid($model) : void
+    {
+        if ($this->_guid_verify === false)
+        {
+            $model->set($this->_guid_column, UUID::v4());
+            return;
+        }
 
-			$query->param(':guid', $current_guid);
-			if ($query->execute()->get($model->primary_key(), FALSE) !== FALSE) {
-				Log::instance()->add(Log::NOTICE, 'Duplicate GUID created for '.$model->table_name());
-				$current_guid = '';
-			}
-		}
+        $current_guid = $model->get($this->_guid_column);
 
-		$model->set($this->_guid_column, $current_guid);
-	}
+        // Try to create a new GUID
+        $query = DB::select()->from($model->table_name())
+                   ->where($this->_guid_column, '=', ':guid')
+                   ->limit(1);
 
-	/**
-	 * A new model is created, add a guid value
-	 *
-	 * @param   ORM $model The model
-	 * @throws	Exception
-	 */
-	public function on_create($model)
-	{
-		$this->create_guid($model);
-	}
+        while (empty($current_guid))
+        {
+            $current_guid = UUID::v4();
+
+            $query->param(':guid', $current_guid);
+
+            try
+            {
+                if ($query->execute()->get($model->primary_key(), false) !== false)
+                {
+                    Log::instance()->notice('Duplicate GUID created for {table}', [
+                        'table' => $model->table_name()
+                    ]);
+                    $current_guid = '';
+                }
+            }
+            catch (\KO7\Exception $e)
+            {
+                throw new Exception($e->getMessage(), null, $e->getCode(), $e);
+            }
+        }
+
+        $model->set($this->_guid_column, $current_guid);
+    }
+
+    /**
+     * A new model is created, add a guid value
+     *
+     * @param ORM $model The model
+     *
+     * @throws    Exception
+     */
+    public function on_create($model) : void
+    {
+        $this->create_guid($model);
+    }
 }

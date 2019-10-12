@@ -31,6 +31,7 @@
   "require": {
     "php": ">=7.4",
     "ext-pdo": "*",
+    "ext-ctype": "*",
     "ext-mysqli": "*",
     "toitzi/modseven": "*",
     "modseven/database": "*",
