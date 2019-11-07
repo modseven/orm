@@ -3,20 +3,21 @@
  * ORM Auth driver.
  *
  * @copyright  (c) 2007-2016  Kohana Team
- * @copyright  (c) since 2016 Koseven Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Auth;
 
-use KO7\Cookie;
-use KO7\Request;
+use Modseven\Cookie;
+use Modseven\Request;
 
 use Modseven\Auth\Auth;
 use Modseven\ORM\Exception;
-use Modseven\ORM\Model\User;
-use Modseven\ORM\Model\Role;
-use Modseven\ORM\Model\User\Token;
+use Modseven\ORM\Model\Auth\User;
+use Modseven\ORM\Model\Auth\Role;
+use Modseven\ORM\Model\Auth\User\Token;
 
 class ORM extends Auth
 {
@@ -29,10 +30,10 @@ class ORM extends Auth
      *
      * @throws Exception
      */
-    public function logged_in($role = null) : bool
+    public function loggedIn($role = null) : bool
     {
         // Get the user from the session
-        $user = $this->get_user();
+        $user = $this->getUser();
 
         if ( ! $user)
         {
@@ -52,8 +53,8 @@ class ORM extends Auth
                 // Get all the roles
                 $roles = \Modseven\ORM\ORM::factory(Role::class)
                             ->where('name', 'IN', $role)
-                            ->find_all()
-                            ->as_array(null, 'id');
+                            ->findAll()
+                            ->asArray(null, 'id');
 
                 // Make sure all the roles are valid ones
                 if (count($roles) !== count($role))
@@ -85,12 +86,13 @@ class ORM extends Auth
     /**
      * Logs a user in.
      *
-     * @param mixed   $user         User to login
-     * @param string  $password     Password
-     * @param boolean $remember     enable auto login
+     * @param mixed   $user     User to login
+     * @param string  $password Password
+     * @param boolean $remember enable auto login
      *
      * @return  boolean
      *
+     * @throws \Modseven\Exception
      * @throws \Modseven\Auth\Exception
      */
     protected function _login($user, string $password, bool $remember)
@@ -100,7 +102,7 @@ class ORM extends Auth
 
             // Load the user
             $user = \Modseven\ORM\ORM::factory(User::class);
-            $user->where($user->unique_key($username), '=', $username)->find();
+            $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
         // Create a hashed password
@@ -128,7 +130,7 @@ class ORM extends Auth
             }
 
             // Finish the login
-            $this->complete_login($user);
+            $this->completeLogin($user);
 
             return true;
         }
@@ -143,14 +145,14 @@ class ORM extends Auth
      * @param mixed   $user                   username string, or user ORM object
      * @param boolean $mark_session_as_forced mark the session as forced
      */
-    public function force_login($user, bool $mark_session_as_forced = false) : void
+    public function forceLogin($user, bool $mark_session_as_forced = false) : void
     {
         if ( ! is_object($user)) {
             $username = $user;
 
             // Load the user
             $user = \Modseven\ORM\ORM::factory(User::class);
-            $user->where($user->unique_key($username), '=', $username)->find();
+            $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
         if ($mark_session_as_forced === true) {
@@ -159,15 +161,17 @@ class ORM extends Auth
         }
 
         // Run the standard completion
-        $this->complete_login($user);
+        $this->completeLogin($user);
     }
 
     /**
      * Logs a user in, based on the authautologin cookie.
      *
      * @return  mixed
+     *
+     * @throws \Modseven\Exception
      */
-    public function auto_login()
+    public function autoLogin()
     {
         if ($token = Cookie::get('authautologin'))
         {
@@ -185,7 +189,7 @@ class ORM extends Auth
                     Cookie::set('authautologin', $token->token, $token->expires - time());
 
                     // Complete the login with the found data
-                    $this->complete_login($token->user);
+                    $this->completeLogin($token->user);
 
                     // Automatic login was successful
                     return $token->user;
@@ -206,13 +210,15 @@ class ORM extends Auth
      * @param mixed $default to return in case user isn't logged in
      *
      * @return  mixed
+     *
+     * @throws \Modseven\Exception
      */
-    public function get_user($default = null)
+    public function getUser($default = null)
     {
-        $user = parent::get_user($default);
+        $user = parent::getUser($default);
 
         // check for "remembered" login
-        if (($user === $default) && ($user = $this->auto_login()) === false)
+        if (($user === $default) && ($user = $this->autoLogin()) === false)
         {
             return $default;
         }
@@ -227,6 +233,8 @@ class ORM extends Auth
      * @param boolean $logout_all remove all tokens for user
      *
      * @return  boolean
+     *
+     * @throws \Modseven\Exception
      */
     public function logout($destroy = false, $logout_all = false) : bool
     {
@@ -244,7 +252,7 @@ class ORM extends Auth
             if ($logout_all && $token->loaded())
             {
                 // Delete all user tokens. This isn't the most elegant solution but does the job
-                $tokens =  \Modseven\ORM\ORM::factory(Token::class)->where('user_id', '=', $token->user_id)->find_all();
+                $tokens =  \Modseven\ORM\ORM::factory(Token::class)->where('user_id', '=', $token->user_id)->findAll();
 
                 foreach ($tokens as $_token)
                 {
@@ -275,7 +283,7 @@ class ORM extends Auth
 
             // Load the user
             $user = \Modseven\ORM\ORM::factory(User::class);
-            $user->where($user->unique_key($username), '=', $username)->find();
+            $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
         return $user->password;
@@ -287,13 +295,13 @@ class ORM extends Auth
      *
      * @param object $user user ORM object
      *
-     * @return  void
+     * @return  bool
      */
-    protected function complete_login($user) : void
+    protected function completeLogin($user) : bool
     {
         $user->complete_login();
 
-        parent::complete_login($user);
+        return parent::completeLogin($user);
     }
 
     /**
@@ -303,11 +311,12 @@ class ORM extends Auth
      *
      * @return  boolean
      *
+     * @throws \Modseven\Exception
      * @throws \Modseven\Auth\Exception
      */
-    public function check_password(string $password) : bool
+    public function checkPassword(string $password) : bool
     {
-        $user = $this->get_user();
+        $user = $this->getUser();
 
         if ( ! $user) {
             return false;

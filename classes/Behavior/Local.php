@@ -1,15 +1,17 @@
 <?php
 /**
- * Local Behavior ClasS
+ * Local Behavior Class
  *
- * @copyright  (c) 2016-2018 Koseven Team
+ * @copyright  (c) 2007-2016  Kohana Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Behavior;
 
-use Modseven\ORM\Behavior;
 use Modseven\ORM\ORM;
+use Modseven\ORM\Behavior;
 
 class Local extends Behavior
 {
@@ -37,7 +39,7 @@ class Local extends Behavior
      *
      * @return bool|mixed
      */
-    public function on_construct($model, $id) : bool
+    public function onConstruct($model, $id) : bool
     {
         $params = ['construct', $id];
         $result = call_user_func_array($this->_callback, $params);
@@ -56,7 +58,7 @@ class Local extends Behavior
      *
      * @param ORM $model The model
      */
-    public function on_update($model) : void
+    public function onUpdate($model) : void
     {
         $params = ['update'];
         call_user_func_array($this->_callback, $params);
@@ -67,7 +69,7 @@ class Local extends Behavior
      *
      * @param ORM $model The model
      */
-    public function on_create($model) : void
+    public function onCreate($model) : void
     {
         $params = ['create'];
         call_user_func_array($this->_callback, $params);

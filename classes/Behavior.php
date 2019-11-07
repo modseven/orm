@@ -2,7 +2,9 @@
 /**
  * ORM Behavior Class
  *
- * @copyright  (c) 2016-2018 Koseven Team
+ * @copyright  (c) 2007-2016  Kohana Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
@@ -55,9 +57,9 @@ class Behavior
         }
     }
 
-    public function on_construct($model, $id): bool { return true; }
+    public function onConstruct($model, $id): bool { return true; }
 
-    public function on_create($model): void {}
+    public function onCreate($model): void {}
 
-    public function on_update($model): void {}
+    public function onUpdate($model): void {}
 }

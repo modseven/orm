@@ -3,17 +3,20 @@
  * Default auth user
  *
  * @copyright  (c) 2007-2016  Kohana Team
- * @copyright  (c) since 2016 Koseven Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Model\Auth;
 
-use KO7\Valid;
-use KO7\Validation;
+use Modseven\Valid;
 use Modseven\ORM\ORM;
+use Modseven\Auth\Auth;
+use Modseven\Validation;
 use Modseven\Database\DB;
 use Modseven\ORM\Exception;
+use Modseven\ORM\Model\Auth\User\Token;
 
 class User extends ORM
 {
@@ -22,8 +25,8 @@ class User extends ORM
      * @var array
      */
     protected array $_has_many = [
-        'user_tokens' => ['model' => 'User_Token'],
-        'roles'       => ['model' => 'Role', 'through' => 'roles_users'],
+        'user_tokens' => ['model' => Token::class],
+        'roles'       => ['model' => Role::class, 'through' => 'roles_users'],
     ];
 
     /**
@@ -38,15 +41,15 @@ class User extends ORM
     {
         return [
             'username' => [
-                ['not_empty'],
-                ['max_length', [':value', 32]],
+                ['notEmpty'],
+                ['maxLength', [':value', 32]],
                 [[$this, 'unique'], ['username', ':value']],
             ],
             'password' => [
-                ['not_empty'],
+                ['notEmpty'],
             ],
             'email'    => [
-                ['not_empty'],
+                ['notEmpty'],
                 ['email'],
                 [[$this, 'unique'], ['email', ':value']],
             ],
@@ -58,12 +61,14 @@ class User extends ORM
      * automatically hashes the password when it's set in the model.
      *
      * @return array
+     *
+     * @throws \Modseven\Auth\Exception
      */
     public function filters() : array
     {
         return [
             'password' => [
-                [[\Modseven\Auth\Auth::instance(), 'hash']]
+                [[Auth::instance(), 'hash']]
             ]
         ];
     }
@@ -86,6 +91,7 @@ class User extends ORM
      * Complete the login for a user by incrementing the logins and saving login timestamp
      *
      * @throws Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function complete_login() : void
@@ -112,12 +118,12 @@ class User extends ORM
      *
      * @throws Exception
      */
-    public function unique_key_exists($value, ?string $field = null) : bool
+    public function uniqueKeyExists($value, ?string $field = null) : bool
     {
         if ($field === null)
         {
             // Automatically determine field by looking at the value
-            $field = $this->unique_key($value);
+            $field = $this->uniqueKey($value);
         }
 
         try
@@ -129,7 +135,7 @@ class User extends ORM
                           ->execute($this->_db)
                           ->get('total_count');
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }
@@ -144,7 +150,7 @@ class User extends ORM
      *
      * @return  string  field name
      */
-    public function unique_key(string $value) : string
+    public function uniqueKey(string $value) : string
     {
         return Valid::email($value) ? 'email' : 'username';
     }
@@ -156,10 +162,10 @@ class User extends ORM
      *
      * @return Validation
      */
-    public static function get_password_validation($values)
+    public static function getPasswordValidation($values)
     {
         return Validation::factory($values)
-                         ->rule('password', 'min_length', [':value', 8])
+                         ->rule('password', 'minLength', [':value', 8])
                          ->rule('password_confirm', 'matches', [':validation', ':field', 'password']);
     }
 
@@ -172,13 +178,14 @@ class User extends ORM
      * @return User|ORM
      *
      * @throws Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function create_user(array $values, array $expected)
     {
         // Validation for passwords
-        $extra_validation = self::get_password_validation($values)
-                                      ->rule('password', 'not_empty');
+        $extra_validation = self::getPasswordValidation($values)
+                                      ->rule('password', 'notEmpty');
 
         return $this->values($values, $expected)->create($extra_validation);
     }
@@ -190,7 +197,9 @@ class User extends ORM
      * @param null $expected
      *
      * @return User|ORM
+     *
      * @throws Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function update_user($values, $expected = null)
@@ -200,7 +209,7 @@ class User extends ORM
         }
 
         // Validation for passwords
-        $extra_validation = self::get_password_validation($values);
+        $extra_validation = self::getPasswordValidation($values);
 
         return $this->values($values, $expected)->update($extra_validation);
     }

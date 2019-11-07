@@ -2,14 +2,16 @@
 /**
  * Guid Behavior Class
  *
- * @copyright  (c) 2016-2018 Koseven Team
+ * @copyright  (c) 2007-2016  Kohana Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Behavior;
 
-use KO7\Arr;
-use KO7\Log;
+use Modseven\Arr;
+use Modseven\Log;
 
 use Modseven\ORM\ORM;
 use Modseven\ORM\UUID;
@@ -61,11 +63,11 @@ class Guid extends Behavior
      *
      * @throws Exception
      */
-    public function on_construct($model, $id): bool
+    public function onConstruct($model, $id): bool
     {
         if (($id !== null) && ! is_array($id) && ! ctype_digit($id))
         {
-            if ( ! UUID:: valid($id))
+            if ( ! UUID::valid($id))
             {
                 throw new Exception('Invalid UUID: :id', [':id' => $id]);
             }
@@ -85,9 +87,9 @@ class Guid extends Behavior
      *
      * @throws Exception
      */
-    public function on_update($model) : void
+    public function onUpdate($model) : void
     {
-        $this->create_guid($model);
+        $this->createGuid($model);
     }
 
     /**
@@ -97,7 +99,7 @@ class Guid extends Behavior
      *
      * @throws Exception
      */
-    private function create_guid($model) : void
+    private function createGuid($model) : void
     {
         if ($this->_guid_verify === false)
         {
@@ -108,7 +110,7 @@ class Guid extends Behavior
         $current_guid = $model->get($this->_guid_column);
 
         // Try to create a new GUID
-        $query = DB::select()->from($model->table_name())
+        $query = DB::select()->from($model->tableName())
                    ->where($this->_guid_column, '=', ':guid')
                    ->limit(1);
 
@@ -120,15 +122,15 @@ class Guid extends Behavior
 
             try
             {
-                if ($query->execute()->get($model->primary_key(), false) !== false)
+                if ($query->execute()->get($model->primaryKey(), false) !== false)
                 {
                     Log::instance()->notice('Duplicate GUID created for {table}', [
-                        'table' => $model->table_name()
+                        'table' => $model->tableName()
                     ]);
                     $current_guid = '';
                 }
             }
-            catch (\KO7\Exception $e)
+            catch (\Modseven\Exception $e)
             {
                 throw new Exception($e->getMessage(), null, $e->getCode(), $e);
             }
@@ -144,8 +146,8 @@ class Guid extends Behavior
      *
      * @throws    Exception
      */
-    public function on_create($model) : void
+    public function onCreate($model) : void
     {
-        $this->create_guid($model);
+        $this->createGuid($model);
     }
 }

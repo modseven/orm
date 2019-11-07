@@ -2,13 +2,15 @@
 /**
  * Slug Behavior Class
  *
- * @copyright  (c) 2016-2018 Koseven Team
+ * @copyright  (c) 2007-2016  Kohana Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Behavior;
 
-use KO7\Arr;
+use Modseven\Arr;
 
 use Modseven\ORM\ORM;
 use Modseven\ORM\Behavior;
@@ -52,7 +54,7 @@ class Slug extends Behavior
      *
      * @throws Exception
      */
-    public function on_construct($model, $id) : bool
+    public function onConstruct($model, $id) : bool
     {
         if (($id !== null) && ! is_array($id) && ! ctype_digit($id))
         {
@@ -72,9 +74,9 @@ class Slug extends Behavior
      *
      * @throws Exception
      */
-    public function on_update($model) : void
+    public function onUpdate($model) : void
     {
-        $this->create_slug($model);
+        $this->createSlug($model);
     }
 
     /**
@@ -84,9 +86,9 @@ class Slug extends Behavior
      *
      * @throws Exception
      */
-    public function on_create($model) : void
+    public function onCreate($model) : void
     {
-        $this->create_slug($model);
+        $this->createSlug($model);
     }
 
     /**
@@ -96,7 +98,7 @@ class Slug extends Behavior
      *
      * @throws Exception
      */
-    private function create_slug($model) : void
+    private function createSlug($model) : void
     {
         $index = 0;
         $current_slug = $model->get($this->_slug_column);
@@ -105,13 +107,13 @@ class Slug extends Behavior
         $source = $model->get($this->_slug_source_column);
         if (empty($source))
         {
-            $source = $model->object_name();
+            $source = $model->objectName();
         }
 
         // Prepare the query
-        $query = DB::select()->from($model->table_name())
+        $query = DB::select()->from($model->tableName())
                    ->where($this->_slug_column, '=', ':slug')
-                   ->where($model->primary_key(), '!=', $model->pk())
+                   ->where($model->primaryKey(), '!=', $model->pk())
                    ->limit(1);
 
         // Create a slugged value
@@ -126,7 +128,7 @@ class Slug extends Behavior
             try
             {
                 // Default slug invalid, add index
-                if ($query->execute()->get($model->primary_key(), false) !== false)
+                if ($query->execute()->get($model->primaryKey(), false) !== false)
                 {
 
                     // Base slug string with an index
@@ -134,7 +136,7 @@ class Slug extends Behavior
                         $current_slug = sprintf('%s-%d', $slug_base, $index);
 
                         $query->param(':slug', $current_slug);
-                        if ($query->execute()->get($model->primary_key(), false) !== false)
+                        if ($query->execute()->get($model->primaryKey(), false) !== false)
                         {
                             $index++;
                             $current_slug = '';
@@ -143,7 +145,7 @@ class Slug extends Behavior
                 }
 
             }
-            catch (\KO7\Exception $e)
+            catch (\Modseven\Exception $e)
             {
                 throw new Exception($e->getMessage(), null, $e->getCode(), $e);
             }
@@ -163,7 +165,7 @@ class Slug extends Behavior
      */
     protected function slugify(string $text, bool $strict = true) : string
     {
-        $txt = $this->remove_accents($text);
+        $txt = $this->removeAccents($text);
 
         // replace non letter or digits by -
         $txt = preg_replace('~[^\\pL\d.]+~u', '-', $txt);
@@ -189,7 +191,7 @@ class Slug extends Behavior
      *
      * @return bool
      */
-    protected function seems_utf8(string $str) : bool
+    protected function seemsUtf8(string $str) : bool
     {
         $length = strlen($str);
         for ($i = 0; $i < $length; $i++)
@@ -244,14 +246,14 @@ class Slug extends Behavior
      *
      * @return string
      */
-    protected function remove_accents(string $string) : string
+    protected function removeAccents(string $string) : string
     {
         if ( ! preg_match('/[\x80-\xff]/', $string))
         {
             return $string;
         }
 
-        if ($this->seems_utf8($string))
+        if ($this->seemsUtf8($string))
         {
             $chars = [
                 // Decompositions for Latin-1 Supplement

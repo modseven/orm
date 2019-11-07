@@ -3,16 +3,17 @@
  * ORM Validation exceptions.
  *
  * @copyright  (c) 2007-2016  Kohana Team
- * @copyright  (c) since 2016 Koseven Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Validation;
 
-use KO7\Validation;
 use Throwable;
+use Modseven\Validation;
 
-class Exception extends \KO7\Exception
+class Exception extends \Modseven\Exception
 {
     /**
      * Array of validation objects
@@ -58,7 +59,7 @@ class Exception extends \KO7\Exception
      *
      * @return self
      */
-    public function add_object(string $alias, Validation $object, $has_many = false) : self
+    public function addObject(string $alias, Validation $object, $has_many = false) : self
     {
         // We will need this when generating errors
         $this->_objects[$alias]['_has_many'] = ($has_many !== false);
@@ -125,7 +126,7 @@ class Exception extends \KO7\Exception
      */
     public function errors(?string $directory = null, $translate = true) : array
     {
-        return $this->generate_errors($this->_alias, $this->_objects, $directory, $translate);
+        return $this->generateErrors($this->_alias, $this->_objects, $directory, $translate);
     }
 
     /**
@@ -138,7 +139,7 @@ class Exception extends \KO7\Exception
      *
      * @return array
      */
-    protected function generate_errors(string $alias, array $array, ?string $directory, $translate) : array
+    protected function generateErrors(string $alias, array $array, ?string $directory, $translate) : array
     {
         $errors = [];
 
@@ -148,9 +149,9 @@ class Exception extends \KO7\Exception
             {
                 $errors[$key] = ($key === '_external')
                     // Search for errors in $alias/_external.php
-                    ? $this->generate_errors($alias . '/' . $key, $object, $directory, $translate)
+                    ? $this->generateErrors($alias . '/' . $key, $object, $directory, $translate)
                     // Regular models get their own file not nested within $alias
-                    : $this->generate_errors($key, $object, $directory, $translate);
+                    : $this->generateErrors($key, $object, $directory, $translate);
             }
             elseif ($object instanceof Validation)
             {

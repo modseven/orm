@@ -3,16 +3,18 @@
  * Default auth user toke
  *
  * @copyright  (c) 2007-2016  Kohana Team
- * @copyright  (c) since 2016 Koseven Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Model\Auth\User;
 
-use KO7\Validation;
+use Modseven\ORM\ORM;
+use Modseven\Validation;
 use Modseven\Database\DB;
 use Modseven\ORM\Exception;
-use Modseven\ORM\ORM;
+use Modseven\ORM\Model\Auth\User;
 
 class Token extends ORM
 {
@@ -21,7 +23,7 @@ class Token extends ORM
      * @var array
      */
     protected array $_belongs_to = [
-        'user' => ['model' => 'User'],
+        'user' => ['model' => User::class],
     ];
 
     /**
@@ -40,7 +42,7 @@ class Token extends ORM
      *
      * @throws Exception;
      * @throws \Exception;
-     * @throws \KO7\Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\Database\Exception
      */
     public function __construct($id = null)
@@ -49,7 +51,7 @@ class Token extends ORM
 
         if (random_int(1, 100) === 1) {
             // Do garbage collection
-            $this->delete_expired();
+            $this->deleteExpired();
         }
 
         if ($this->expires < time() && $this->_loaded) {
@@ -65,7 +67,7 @@ class Token extends ORM
      *
      * @throws Exception
      */
-    public function delete_expired() : self
+    public function deleteExpired() : self
     {
         // Delete all expired tokens
         try
@@ -74,7 +76,7 @@ class Token extends ORM
                                  ->where('expires', '<', time())
                                  ->execute($this->_db);
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }
@@ -92,7 +94,7 @@ class Token extends ORM
      */
     public function create(?Validation $validation = null) : ORM
     {
-        $this->token = $this->create_token();
+        $this->token = $this->createToken();
 
         return parent::create($validation);
     }
@@ -104,12 +106,12 @@ class Token extends ORM
      *
      * @throws \Exception
      */
-    protected function create_token() : string
+    protected function createToken() : string
     {
         do
         {
-            $token = sha1(uniqid(\KO7\Text::random('alnum', 32), true));
-        } while (ORM::factory('User_Token', ['token' => $token])->loaded());
+            $token = sha1(uniqid(\Modseven\Text::random('alnum', 32), true));
+        } while (ORM::factory(self::class, ['token' => $token])->loaded());
 
         return $token;
     }

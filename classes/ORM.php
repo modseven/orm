@@ -2,13 +2,14 @@
 /**
  * [Object Relational Mapping][ref-orm] (ORM) is a method of abstracting database
  * access to standard PHP calls. All table rows are represented as model objects,
- * with object properties representing row data. ORM in KO7 generally follows
+ * with object properties representing row data. ORM in Modseven generally follows
  * the [Active Record][ref-act] pattern.
  * [ref-orm]: http://wikipedia.org/wiki/Object-relational_mapping
  * [ref-act]: http://wikipedia.org/wiki/Active_record
  *
  * @copyright  (c) 2007-2016  Kohana Team
- * @copyright  (c) since 2016 Koseven Team
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
  * @license        https://koseven.ga/LICENSE
  */
 
@@ -22,10 +23,10 @@ use ReflectionMethod;
 use ReflectionFunction;
 use ReflectionException;
 
-use KO7\Arr;
-use KO7\Inflector;
-use KO7\Model;
-use KO7\Validation;
+use Modseven\Arr;
+use Modseven\Inflector;
+use Modseven\Model;
+use Modseven\Validation;
 
 use Modseven\Database\DB;
 use Modseven\Database\Result;
@@ -283,7 +284,7 @@ class ORM extends Model implements serializable
      *
      * @param mixed $id Parameter for find or object to load
      *
-     * @throws \KO7\Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\Database\Exception
      */
     public function __construct($id = null)
@@ -293,7 +294,7 @@ class ORM extends Model implements serializable
         // Invoke all behaviors
         foreach ($this->_behaviors as $behavior)
         {
-            if ($this->_loaded || ( ! $behavior->on_construct($this, $id)))
+            if ($this->_loaded || ( ! $behavior->onConstruct($this, $id)))
             {
                 return;
             }
@@ -320,7 +321,7 @@ class ORM extends Model implements serializable
         elseif ( ! empty($this->_cast_data))
         {
             // Load preloaded data from a database call cast
-            $this->_load_values($this->_cast_data);
+            $this->_loadValues($this->_cast_data);
 
             $this->_cast_data = [];
         }
@@ -330,7 +331,7 @@ class ORM extends Model implements serializable
      * Prepares the model database connection, determines the table name,
      * and loads column information.
      *
-     * @throws \KO7\Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\Database\Exception
      */
     protected function _initialize() : void
@@ -385,7 +386,7 @@ class ORM extends Model implements serializable
             {
                 if ( ! isset($details['model']))
                 {
-                    $defaults['model'] = str_replace(' ', '_', ucwords(str_replace('_', ' ', $alias)));
+                    $defaults['model'] = $alias;
                 }
 
                 $defaults['foreign_key'] = $alias . $this->_foreign_key_suffix;
@@ -397,7 +398,7 @@ class ORM extends Model implements serializable
             {
                 if ( ! isset($details['model']))
                 {
-                    $defaults['model'] = str_replace(' ', '_', ucwords(str_replace('_', ' ', $alias)));
+                    $defaults['model'] = $alias;
                 }
 
                 $defaults['foreign_key'] = $this->_object_name . $this->_foreign_key_suffix;
@@ -409,7 +410,7 @@ class ORM extends Model implements serializable
             {
                 if ( ! isset($details['model']))
                 {
-                    $defaults['model'] = str_replace(' ', '_', ucwords(str_replace('_', ' ', Inflector::singular($alias))));
+                    $defaults['model'] = $alias;
                 }
 
                 $defaults['foreign_key'] = $this->_object_name . $this->_foreign_key_suffix;
@@ -433,7 +434,7 @@ class ORM extends Model implements serializable
         }
 
         // Load column information
-        $this->reload_columns();
+        $this->reloadColumns();
 
         // Clear initial model state
         $this->clear();
@@ -480,7 +481,7 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function reload_columns(bool $force = false) : self
+    public function reloadColumns(bool $force = false) : self
     {
         if ($force === true || empty($this->_table_columns))
         {
@@ -492,7 +493,7 @@ class ORM extends Model implements serializable
             else
             {
                 // Grab column information from database
-                $this->_table_columns = $this->list_columns();
+                $this->_table_columns = $this->listColumns();
 
                 // Load column cache
                 static::$_column_cache[$this->_object_name] = $this->_table_columns;
@@ -518,7 +519,7 @@ class ORM extends Model implements serializable
         $this->_object = $this->_changed = $this->_related = $this->_original_values = [];
 
         // Replace the current object with an empty one
-        $this->_load_values($values);
+        $this->_loadValues($values);
 
         // Reset primary key
         $this->_primary_key_value = null;
@@ -640,7 +641,7 @@ class ORM extends Model implements serializable
      *
      * @return bool          True if field has changed, false if it has not.
      */
-    public function has_changed(string $field) : bool
+    public function hasChanged(string $field) : bool
     {
         return array_key_exists($field, $this->_changed);
     }
@@ -652,7 +653,7 @@ class ORM extends Model implements serializable
      *
      * @return  void
      *
-     * @throws \KO7\Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\Database\Exception
      */
     public function unserialize($data) : void
@@ -702,7 +703,7 @@ class ORM extends Model implements serializable
         if (array_key_exists($column, $this->_object))
         {
             return (in_array($column, $this->_serialize_columns, true))
-                ? $this->_unserialize_value($this->_object[$column])
+                ? $this->_unserializeValue($this->_object[$column])
                 : $this->_object[$column];
         }
         if (isset($this->_related[$column]))
@@ -810,13 +811,13 @@ class ORM extends Model implements serializable
 
         if (in_array($column, $this->_serialize_columns, true))
         {
-            $value = $this->_serialize_value($value);
+            $value = $this->_serializeValue($value);
         }
 
         if (array_key_exists($column, $this->_object))
         {
             // Filter the data
-            $value = $this->run_filter($column, $value);
+            $value = $this->runFilter($column, $value);
 
             // See if the data really changed
             if ($value !== $this->_object[$column])
@@ -847,14 +848,14 @@ class ORM extends Model implements serializable
             if (Arr::get($this->_has_many[$column], 'update', false))
             {
                 $model = $this->_has_many[$column]['model'];
-                $pk = self::factory($model)->primary_key();
+                $pk = self::factory($model)->primaryKey();
 
-                $current_ids = $this->get($column)->find_all()->as_array(null, 'id');
+                $current_ids = $this->get($column)->findAll()->asArray(null, 'id');
 
                 $new_ids = array_diff($value, $current_ids);
                 if (count($new_ids) > 0)
                 {
-                    $objects = self::factory($model)->where($pk, 'IN', $new_ids)->find_all();
+                    $objects = self::factory($model)->where($pk, 'IN', $new_ids)->findAll();
                     foreach ($objects as $object)
                     {
                         $this->add($column, $object);
@@ -864,7 +865,7 @@ class ORM extends Model implements serializable
                 $delete_ids = array_diff($current_ids, $value);
                 if (count($delete_ids) > 0)
                 {
-                    $objects = self::factory($model)->where($pk, 'IN', $delete_ids)->find_all();
+                    $objects = self::factory($model)->where($pk, 'IN', $delete_ids)->findAll();
                     foreach ($objects as $object) {
                         $this->remove($column, $object);
                     }
@@ -946,7 +947,7 @@ class ORM extends Model implements serializable
      *
      * @return string|bool
      */
-    public function table_column_type(string $column)
+    public function tableColumnType(string $column)
     {
         if ( ! array_key_exists($column, $this->_table_columns))
         {
@@ -966,7 +967,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    protected function get_typed(string $column)
+    protected function getTyped(string $column)
     {
         $value = $this->get($column);
 
@@ -976,7 +977,7 @@ class ORM extends Model implements serializable
         }
 
         // Call __get for any user processing
-        switch ($this->table_column_type($column))
+        switch ($this->tableColumnType($column))
         {
             case 'float':
                 return (float)$this->__get($column);
@@ -996,8 +997,10 @@ class ORM extends Model implements serializable
      * @param bool $show_all Show all models
      *
      * @return array
+     *
+     * @throws Exception
      */
-    public function as_array(bool $show_all = false) : array
+    public function asArray(bool $show_all = false) : array
     {
         $object = [];
 
@@ -1024,7 +1027,7 @@ class ORM extends Model implements serializable
         foreach ($this->_related as $column => $model)
         {
             // Include any related objects that are already loaded
-            $object[$column] = $model->as_array();
+            $object[$column] = $model->asArray();
         }
 
         return $object;
@@ -1041,7 +1044,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    public function as_object(bool $show_all = false) : stdClass
+    public function asObject(bool $show_all = false) : stdClass
     {
         $object = new stdClass;
 
@@ -1049,7 +1052,7 @@ class ORM extends Model implements serializable
         {
             foreach ($this->_object as $column => $value)
             {
-                $object->{$column} = $this->get_typed($column);
+                $object->{$column} = $this->getTyped($column);
             }
         }
         else
@@ -1057,7 +1060,7 @@ class ORM extends Model implements serializable
             foreach ($this->_object as $column => $value)
             {
                 if ( ! in_array($column, $this->_private_columns, true)) {
-                    $object->{$column} = $this->get_typed($column);
+                    $object->{$column} = $this->getTyped($column);
                 }
             }
         }
@@ -1065,7 +1068,7 @@ class ORM extends Model implements serializable
         foreach ($this->_related as $column => $model)
         {
             // Include any related objects that are already loaded
-            $object->{$column} = $model->as_object();
+            $object->{$column} = $model->asObject();
         }
 
         return $object;
@@ -1217,7 +1220,7 @@ class ORM extends Model implements serializable
 
         $this->_build(Database::SELECT);
 
-        return $this->_load_result(false);
+        return $this->_loadResult(false);
     }
 
     /**
@@ -1227,7 +1230,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    public function find_all()
+    public function findAll()
     {
         if ($this->_loaded)
         {
@@ -1245,7 +1248,7 @@ class ORM extends Model implements serializable
 
         $this->_build(Database::SELECT);
 
-        return $this->_load_result(true);
+        return $this->_loadResult(true);
     }
 
     /**
@@ -1254,7 +1257,7 @@ class ORM extends Model implements serializable
      *
      * @return array Columns to select
      */
-    protected function _build_select() : array
+    protected function _buildSelect() : array
     {
         $columns = [];
 
@@ -1278,7 +1281,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    protected function _load_result(bool $multiple = false)
+    protected function _loadResult(bool $multiple = false)
     {
         $this->_db_builder->from([$this->_table_name, $this->_object_name]);
 
@@ -1289,7 +1292,7 @@ class ORM extends Model implements serializable
         }
 
         // Select all columns by default
-        $this->_db_builder->select_array($this->_build_select());
+        $this->_db_builder->selectArray($this->_buildSelect());
 
         if ( ! isset($this->_db_applied['order_by']) && ! empty($this->_sorting))
         {
@@ -1301,7 +1304,7 @@ class ORM extends Model implements serializable
                     $column = $this->_object_name . '.' . $column;
                 }
 
-                $this->_db_builder->order_by($column, $direction);
+                $this->_db_builder->orderBy($column, $direction);
             }
         }
 
@@ -1310,9 +1313,9 @@ class ORM extends Model implements serializable
             try
             {
                 // Return database iterator casting to this object type
-                $result = $this->_db_builder->as_object(get_class($this))->execute($this->_db);
+                $result = $this->_db_builder->asObject(get_class($this))->execute($this->_db);
             }
-            catch (\KO7\Exception $e)
+            catch (\Modseven\Exception $e)
             {
                 throw new Exception($e->getMessage(), NULL, $e->getCode(), $e);
             }
@@ -1325,9 +1328,9 @@ class ORM extends Model implements serializable
         try
         {
             // Load the result as an associative array
-            $result = $this->_db_builder->as_assoc()->execute($this->_db);
+            $result = $this->_db_builder->asAssoc()->execute($this->_db);
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), NULL, $e->getCode(), $e);
         }
@@ -1337,7 +1340,7 @@ class ORM extends Model implements serializable
         if ($result->count() === 1)
         {
             // Load object values
-            $this->_load_values($result->current());
+            $this->_loadValues($result->current());
         }
         else
         {
@@ -1357,7 +1360,7 @@ class ORM extends Model implements serializable
      *
      * @return self
      */
-    protected function _load_values(array $values) : self
+    protected function _loadValues(array $values) : self
     {
         if (array_key_exists($this->_primary_key, $values))
         {
@@ -1400,7 +1403,7 @@ class ORM extends Model implements serializable
             foreach ($related as $object => $vals)
             {
                 // Load the related objects with the values in the result
-                $this->_related($object)->_load_values($vals);
+                $this->_related($object)->_loadValues($vals);
             }
         }
 
@@ -1443,7 +1446,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    protected function run_filter(string $field, string $value) : string
+    protected function runFilter(string $field, string $value) : string
     {
         $filters = $this->filters();
 
@@ -1547,6 +1550,7 @@ class ORM extends Model implements serializable
      *
      * @return self
      *
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function check(Validation $extra_validation = null) : self
@@ -1561,12 +1565,12 @@ class ORM extends Model implements serializable
 
         if ($extra_errors || ($this->_valid = $array->check()) === false)
         {
-            $exception = new \Modseven\ORM\Validation\Exception($this->errors_filename(), $array);
+            $exception = new \Modseven\ORM\Validation\Exception($this->errorsFilename(), $array);
 
             if ($extra_errors)
             {
                 // Merge any possible errors from the external object
-                $exception->add_object('_external', $extra_validation);
+                $exception->addObject('_external', $extra_validation);
             }
             throw $exception;
         }
@@ -1582,6 +1586,7 @@ class ORM extends Model implements serializable
      * @return self
      *
      * @throws Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function create(?Validation $validation = null) : self
@@ -1596,7 +1601,7 @@ class ORM extends Model implements serializable
         // Invoke all behaviors
         foreach ($this->_behaviors as $behavior)
         {
-            $behavior->on_create($this);
+            $behavior->onCreate($this);
         }
 
         // Require model validation before saving
@@ -1628,7 +1633,7 @@ class ORM extends Model implements serializable
                         ->values(array_values($data))
                         ->execute($this->_db);
         }
-        catch (\KO7\Exception|\Modseven\Database\Exception $e)
+        catch (\Modseven\Exception|\Modseven\Database\Exception $e)
         {
             throw new Exception($e->getMessage(), NULL, $e->getCode(), $e);
         }
@@ -1663,6 +1668,7 @@ class ORM extends Model implements serializable
      * @return self
      *
      * @throws Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function update(Validation $validation = null) : self
@@ -1677,7 +1683,7 @@ class ORM extends Model implements serializable
         // Invoke all behaviors
         foreach ($this->_behaviors as $behavior)
         {
-            $behavior->on_update($this);
+            $behavior->onUpdate($this);
         }
 
         // Run validation if the model isn't valid or we have additional validation rules.
@@ -1718,7 +1724,7 @@ class ORM extends Model implements serializable
               ->where($this->_primary_key, '=', $id)
               ->execute($this->_db);
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }
@@ -1748,6 +1754,7 @@ class ORM extends Model implements serializable
      * @return self
      *
      * @throws Exception
+     * @throws \Modseven\Exception
      * @throws \Modseven\ORM\Validation\Exception
      */
     public function save(?Validation $validation = null) : self
@@ -1782,7 +1789,7 @@ class ORM extends Model implements serializable
               ->where($this->_primary_key, '=', $id)
               ->execute($this->_db);
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), NULL, $e->getCode(), $e);
         }
@@ -1804,7 +1811,7 @@ class ORM extends Model implements serializable
      */
     public function has(string $alias, $far_keys = null) : bool
     {
-        $count = $this->count_relations($alias, $far_keys);
+        $count = $this->countRelations($alias, $far_keys);
 
         if ($far_keys === null)
         {
@@ -1834,9 +1841,9 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    public function has_any(string $alias, $far_keys = null) : bool
+    public function hasAny(string $alias, $far_keys = null) : bool
     {
-        return (bool)$this->count_relations($alias, $far_keys);
+        return (bool)$this->countRelations($alias, $far_keys);
     }
 
     /**
@@ -1849,7 +1856,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    public function count_relations(string $alias, $far_keys = null) : int
+    public function countRelations(string $alias, $far_keys = null) : int
     {
         if ($far_keys === null)
         {
@@ -1859,7 +1866,7 @@ class ORM extends Model implements serializable
                               ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk())
                               ->execute($this->_db)->get('records_found');
             }
-            catch (\KO7\Exception $e)
+            catch (\Modseven\Exception $e)
             {
                 throw new Exception($e->getMessage(), null, $e->getCode(), $e);
             }
@@ -1883,7 +1890,7 @@ class ORM extends Model implements serializable
                             ->where($this->_has_many[$alias]['far_key'], 'IN', $far_keys)
                             ->execute($this->_db)->get('records_found');
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }
@@ -1904,7 +1911,7 @@ class ORM extends Model implements serializable
      */
     public function add(string $alias, $far_keys) : self
     {
-        $far_keys = ($far_keys instanceof ORM) ? $far_keys->pk() : $far_keys;
+        $far_keys = ($far_keys instanceof self) ? $far_keys->pk() : $far_keys;
 
         $columns = [$this->_has_many[$alias]['foreign_key'], $this->_has_many[$alias]['far_key']];
         $foreign_key = $this->pk();
@@ -1927,7 +1934,7 @@ class ORM extends Model implements serializable
         {
             $query->execute($this->_db);
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }
@@ -1961,7 +1968,7 @@ class ORM extends Model implements serializable
         {
             $query->execute($this->_db);
         }
-        catch (\KO7\Exception $e)
+        catch (\Modseven\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }
@@ -1973,8 +1980,10 @@ class ORM extends Model implements serializable
      * Count the number of records in the table.
      *
      * @return int
+     *            
+     * @throws \Modseven\Exception
      */
-    public function count_all() : int
+    public function countAll() : int
     {
         $selects = [];
 
@@ -2001,7 +2010,7 @@ class ORM extends Model implements serializable
 
         $records = $this->_db_builder->from([$this->_table_name, $this->_object_name])
                                      ->select([
-                                             DB::expr('COUNT(' . $this->_db->quote_column($this->_object_name . '.' .
+                                             DB::expr('COUNT(' . $this->_db->quoteColumn($this->_object_name . '.' .
                                                                                           $this->_primary_key
                                                  ) . ')'
                                              ), 'records_found'
@@ -2024,10 +2033,10 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function list_columns() : array
+    public function listColumns() : array
     {
         // Proxy to database
-        return $this->_db->list_columns($this->_table_name);
+        return $this->_db->listColumns($this->_table_name);
     }
 
     /**
@@ -2070,7 +2079,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function last_query() : string
+    public function lastQuery() : string
     {
         return $this->_db->last_query;
     }
@@ -2105,7 +2114,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    protected function _serialize_value($value) : string
+    protected function _serializeValue($value) : string
     {
         return json_encode($value);
     }
@@ -2119,7 +2128,7 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    protected function _unserialize_value(string $value) : array
+    protected function _unserializeValue(string $value) : array
     {
         try
         {
@@ -2137,7 +2146,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function object_name() : string
+    public function objectName() : string
     {
         return $this->_object_name;
     }
@@ -2147,7 +2156,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function object_plural() : string
+    public function objectPlural() : string
     {
         return $this->_object_plural;
     }
@@ -2176,7 +2185,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function primary_key() : string
+    public function primaryKey() : string
     {
         return $this->_primary_key;
     }
@@ -2186,7 +2195,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function table_name() : string
+    public function tableName() : string
     {
         return $this->_table_name;
     }
@@ -2196,7 +2205,7 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function table_columns() : array
+    public function tableColumns() : array
     {
         return $this->_table_columns;
     }
@@ -2206,7 +2215,7 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function has_one() : array
+    public function hasOne() : array
     {
         return $this->_has_one;
     }
@@ -2216,7 +2225,7 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function belongs_to() : array
+    public function belongsTo() : array
     {
         return $this->_belongs_to;
     }
@@ -2226,7 +2235,7 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function has_many() : array
+    public function hasMany() : array
     {
         return $this->_has_many;
     }
@@ -2236,7 +2245,7 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function load_with() : array
+    public function loadWith() : array
     {
         return $this->_load_with;
     }
@@ -2246,7 +2255,7 @@ class ORM extends Model implements serializable
      *
      * @return array
      */
-    public function original_values() : array
+    public function originalValues() : array
     {
         return $this->_original_values;
     }
@@ -2256,7 +2265,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function created_column() : string
+    public function createdColumn() : string
     {
         return $this->_created_column;
     }
@@ -2266,7 +2275,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function updated_column() : string
+    public function updatedColumn() : string
     {
         return $this->_updated_column;
     }
@@ -2301,7 +2310,7 @@ class ORM extends Model implements serializable
      *
      * @return string
      */
-    public function errors_filename() : string
+    public function errorsFilename() : string
     {
         return $this->_errors_filename;
     }
@@ -2335,11 +2344,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function and_where($column, string $op, $value) : self
+    public function andWhere($column, string $op, $value) : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'and_where',
+            'name' => 'andWhere',
             'args' => [$column, $op, $value],
         ];
 
@@ -2355,11 +2364,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function or_where($column, string $op, $value) : self
+    public function orWhere($column, string $op, $value) : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'or_where',
+            'name' => 'orWhere',
             'args' => [$column, $op, $value],
         ];
 
@@ -2371,9 +2380,9 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function where_open() : self
+    public function whereOpen() : self
     {
-        return $this->and_where_open();
+        return $this->andWhereOpen();
     }
 
     /**
@@ -2381,11 +2390,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function and_where_open() : self
+    public function andWhereOpen() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'and_where_open',
+            'name' => 'andWhereOpen',
             'args' => [],
         ];
 
@@ -2397,11 +2406,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function or_where_open() : self
+    public function orWhereOpen() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'or_where_open',
+            'name' => 'orWhereOpen',
             'args' => [],
         ];
 
@@ -2413,9 +2422,9 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function where_close() : self
+    public function whereClose() : self
     {
-        return $this->and_where_close();
+        return $this->andWhereClose();
     }
 
     /**
@@ -2423,11 +2432,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function and_where_close() : self
+    public function andWhereClose() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'and_where_close',
+            'name' => 'andWhereClose',
             'args' => [],
         ];
 
@@ -2439,11 +2448,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function or_where_close() : self
+    public function orWhereClose() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'or_where_close',
+            'name' => 'orWhereClose',
             'args' => [],
         ];
 
@@ -2458,11 +2467,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function order_by($column, ?string $direction = null) : self
+    public function orderBy($column, ?string $direction = null) : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'order_by',
+            'name' => 'orderBy',
             'args' => [$column, $direction],
         ];
 
@@ -2590,11 +2599,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function group_by(...$columns) : self
+    public function groupBy(...$columns) : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'group_by',
+            'name' => 'groupBy',
             'args' => $columns,
         ];
 
@@ -2612,7 +2621,7 @@ class ORM extends Model implements serializable
      */
     public function having($column, string $op, $value = null) : self
     {
-        return $this->and_having($column, $op, $value);
+        return $this->andHaving($column, $op, $value);
     }
 
     /**
@@ -2624,11 +2633,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function and_having($column, string $op, $value = null) : self
+    public function andHaving($column, string $op, $value = null) : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'and_having',
+            'name' => 'andHaving',
             'args' => [$column, $op, $value],
         ];
 
@@ -2644,11 +2653,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function or_having($column, string $op, $value = null) : self
+    public function orHaving($column, string $op, $value = null) : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'or_having',
+            'name' => 'orHaving',
             'args' => [$column, $op, $value],
         ];
 
@@ -2660,9 +2669,9 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function having_open() : self
+    public function havingOpen() : self
     {
-        return $this->and_having_open();
+        return $this->andHavingOpen();
     }
 
     /**
@@ -2670,11 +2679,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function and_having_open() : self
+    public function andHavingOpen() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'and_having_open',
+            'name' => 'andHavingOpen',
             'args' => [],
         ];
 
@@ -2686,11 +2695,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function or_having_open() : self
+    public function orHavingOpen() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'or_having_open',
+            'name' => 'orHavingOpen',
             'args' => [],
         ];
 
@@ -2702,9 +2711,9 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function having_close() : self
+    public function havingClose() : self
     {
-        return $this->and_having_close();
+        return $this->andHavingClose();
     }
 
     /**
@@ -2712,11 +2721,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function and_having_close() : self
+    public function andHavingClose() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'and_having_close',
+            'name' => 'andHavingClose',
             'args' => [],
         ];
 
@@ -2728,11 +2737,11 @@ class ORM extends Model implements serializable
      *
      * @return  self
      */
-    public function or_having_close() : self
+    public function orHavingClose() : self
     {
         // Add pending database call which is executed after query type is determined
         $this->_db_pending[] = [
-            'name' => 'or_having_close',
+            'name' => 'orHavingClose',
             'args' => [],
         ];
 
@@ -2824,7 +2833,7 @@ class ORM extends Model implements serializable
      */
     public function unique(string $field, $value) : bool
     {
-        $model = self::factory($this->object_name())
+        $model = self::factory($this->objectName())
                     ->where($field, '=', $value)
                     ->find();
 
@@ -2835,15 +2844,6 @@ class ORM extends Model implements serializable
         return ( ! $model->loaded());
     }
 
-
-    /**
-     * Get the quoted table name from the model name
-     *
-     * @param string $orm_model Model name
-     *
-     * @return  string   Quoted table name
-     */
-
     /**
      * Quote Table
      *
@@ -2853,13 +2853,13 @@ class ORM extends Model implements serializable
      *
      * @throws Exception
      */
-    public static function quote_table(string $orm_model) : string
+    public static function quoteTable(string $orm_model) : string
     {
         try
         {
-            $table = Database::instance()->quote_table(strtolower($orm_model));
+            $table = Database::instance()->quoteTable(strtolower($orm_model));
         }
-        catch (\KO7\Exception|\Modseven\Database\Exception $e)
+        catch (\Modseven\Exception|\Modseven\Database\Exception $e)
         {
             throw new Exception($e->getMessage(), null, $e->getCode(), $e);
         }

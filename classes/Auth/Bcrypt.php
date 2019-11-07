@@ -3,30 +3,31 @@
  * Bcrypt Auth driver.
  *
  * @copyright  (c) 2007-2016  Kohana Team
- * @copyright  (c) since 2016 Koseven Team
- * @license        http:/koseven.ga/license
+ * @copyright  (c) 2016-2019  Koseven Team
+ * @copyright  (c) since 2019 Modseven Team
+ * @license        https://koseven.ga/LICENSE
  */
 
 namespace Modseven\ORM\Auth;
 
-use KO7\Cookie;
+use Modseven\Cookie;
 
-use Ko7\Request;
+use Modseven\Request;
 use Modseven\Auth\Auth;
 use Modseven\ORM\Exception;
-use Modseven\ORM\Model\User;
-use Modseven\ORM\Model\Role;
-use Modseven\ORM\Model\User\Token;
+use Modseven\ORM\Model\Auth\User;
+use Modseven\ORM\Model\Auth\Role;
+use Modseven\ORM\Model\Auth\User\Token;
 
 class Bcrypt extends Auth
 {
-
     /**
      * Bcrypt Auth constructor.
      *
      * @param array $config Configuration Values
      *
      * @throws Exception
+     * @throws \Modseven\Exception
      */
     public function __construct(array $config = [])
     {
@@ -41,8 +42,9 @@ class Bcrypt extends Auth
      * Logs a user in, based on the authautologin cookie.
      *
      * @return  mixed
+     * @throws \Modseven\Exception
      */
-    public function auto_login()
+    public function autoLogin()
     {
         if ($token = Cookie::get('authautologin'))
         {
@@ -60,7 +62,7 @@ class Bcrypt extends Auth
                     Cookie::set('authautologin', $token->token, $token->expires - time());
 
                     // Complete the login with the found data
-                    $this->complete_login($token->user);
+                    $this->completeLogin($token->user);
 
                     // Automatic login was successful
                     return $token->user;
@@ -81,13 +83,15 @@ class Bcrypt extends Auth
      * @param mixed $default to return in case user isn't logged in
      *
      * @return  mixed
+     *
+     * @throws \Modseven\Exception
      */
-    public function get_user($default = null)
+    public function getUser($default = null)
     {
-        $user = parent::get_user($default);
+        $user = parent::getUser($default);
 
         // check for "remembered" login
-        if (($user === $default) && ($user = $this->auto_login()) === false)
+        if (($user === $default) && ($user = $this->autoLogin()) === false)
         {
             return $default;
         }
@@ -102,6 +106,8 @@ class Bcrypt extends Auth
      * @param boolean $logout_all remove all tokens for user
      *
      * @return  boolean
+     *
+     * @throws \Modseven\Exception
      */
     public function logout(bool $destroy = false, bool $logout_all = false) : bool
     {
@@ -119,7 +125,7 @@ class Bcrypt extends Auth
             if ($logout_all && $token->loaded())
             {
                 // Delete all user tokens. This isn't the most elegant solution but does the job
-                $tokens = \Modseven\ORM\ORM::factory(Token::class)->where('user_id', '=', $token->user_id)->find_all();
+                $tokens = \Modseven\ORM\ORM::factory(Token::class)->where('user_id', '=', $token->user_id)->findAll();
 
                 foreach ($tokens as $_token)
                 {
@@ -143,12 +149,14 @@ class Bcrypt extends Auth
      * @param bool   $remember Remembers login
      *
      * @return boolean
+     *
+     * @throws \Modseven\Exception
      */
     protected function _login(string $username, string $password, bool $remember = false) : bool
     {
         // Load the user
         $user = \Modseven\ORM\ORM::factory(User::class);
-        $user->where($user->unique_key($username), '=', $username)->find();
+        $user->where($user->uniqueKey($username), '=', $username)->find();
 
         if ($user->loaded() && password_verify($password, $user->password) && $user->has('roles', \Modseven\ORM\ORM::factory(Role::class, ['name' => 'login'])))
         {
@@ -170,8 +178,8 @@ class Bcrypt extends Auth
                 Cookie::set('authautologin', $token->token, $this->_config['lifetime']);
             }
 
-            $this->complete_login($user);
-            $user->complete_login();
+            $this->completeLogin($user);
+            $user->completeLogin();
 
             if (password_needs_rehash($user->password, PASSWORD_BCRYPT, ['cost' => $this->_config['cost']])) {
                 $user->password = $password;
@@ -190,10 +198,12 @@ class Bcrypt extends Auth
      * @param string $password
      *
      * @return  bool
+     *
+     * @throws \Modseven\Exception
      */
-    public function check_password(string $password) : bool
+    public function checkPassword(string $password) : bool
     {
-        $user = $this->get_user();
+        $user = $this->getUser();
 
         if ( ! $user)
         {
@@ -218,7 +228,7 @@ class Bcrypt extends Auth
 
             // Load the user
             $user = \Modseven\ORM\ORM::factory(User::class);
-            $user->where($user->unique_key($username), '=', $username)->find();
+            $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
         return $user->password;
@@ -230,7 +240,7 @@ class Bcrypt extends Auth
      * @param mixed   $user                   username string, or user ORM object
      * @param boolean $mark_session_as_forced mark the session as forced
      */
-    public function force_login($user, bool $mark_session_as_forced = false) : void
+    public function forceLogin($user, bool $mark_session_as_forced = false) : void
     {
         if ( ! is_object($user))
         {
@@ -238,7 +248,7 @@ class Bcrypt extends Auth
 
             // Load the user
             $user = \Modseven\ORM\ORM::factory(User::class);
-            $user->where($user->unique_key($username), '=', $username)->find();
+            $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
         if ($mark_session_as_forced === true)
@@ -248,7 +258,7 @@ class Bcrypt extends Auth
         }
 
         // Run the standard completion
-        $this->complete_login($user);
+        $this->completeLogin($user);
     }
 
     /**

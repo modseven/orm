@@ -29,11 +29,10 @@
     }
   ],
   "require": {
-    "php": ">=7.4",
     "ext-pdo": "*",
     "ext-ctype": "*",
     "ext-mysqli": "*",
-    "toitzi/modseven": "*",
+    "modseven/core": "*",
     "modseven/database": "*",
     "modseven/auth" : "*"
   },
@@ -41,6 +40,9 @@
     "psr-4": {
       "Modseven\\ORM\\": "classes"
     }
+  },
+  "extra" : {
+    "modseven" : true
   },
   "minimum-stability": "dev",
   "prefer-stable": true
