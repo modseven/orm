@@ -18,6 +18,9 @@ use Modseven\ORM\Model\Auth\User;
 
 class Token extends ORM
 {
+
+    protected string $_table_name = 'user_tokens';
+
     /**
      * Belongs to
      * @var array

@@ -20,6 +20,9 @@ use Modseven\ORM\Model\Auth\User\Token;
 
 class User extends ORM
 {
+
+    protected string $_table_name = 'users';
+
     /**
      * A user has many tokens and roles
      * @var array

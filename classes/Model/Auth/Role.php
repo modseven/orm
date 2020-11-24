@@ -14,6 +14,9 @@ use Modseven\ORM\ORM;
 
 class Role extends ORM
 {
+
+    protected string $_table_name = 'roles';
+
     /**
      * Relationships
      * @var array
