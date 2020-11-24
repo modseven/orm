@@ -339,7 +339,9 @@ class ORM extends Model implements serializable
         // Set the object name if none predefined
         if (empty($this->_object_name))
         {
-            $this->_object_name = strtolower(substr(get_class($this), 6));
+            //$this->_object_name = strtolower(substr(get_class($this), 6));
+            $class = get_class($this);
+            $this->_object_name = strtolower(str_replace('\\', '_', substr($class, strpos($class, 'Model') + 6)));
         }
 
         // Check if this model has already been initialized
