@@ -2835,7 +2835,7 @@ class ORM extends Model implements serializable
      */
     public function unique(string $field, $value) : bool
     {
-        $model = self::factory($this->objectName())
+        $model = self::factory(static::class)
                     ->where($field, '=', $value)
                     ->find();
 
