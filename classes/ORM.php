@@ -133,15 +133,15 @@ class ORM extends Model implements serializable
 
     /**
      * Model name
-     * @var string
+     * @var string|null
      */
-    protected string $_object_name;
+    protected ?string $_object_name = null;
 
     /**
      * Plural model name
-     * @var string
+     * @var string|null
      */
-    protected string $_object_plural;
+    protected ?string $_object_plural = null;
 
     /**
      * Table name
