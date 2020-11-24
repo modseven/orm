@@ -26,7 +26,7 @@ class Token extends ORM
      * @var array
      */
     protected array $_belongs_to = [
-        'user' => ['model' => User::class],
+        'user' => ['model' => User::class, 'foreign_key' => 'user_id'],
     ];
 
     /**

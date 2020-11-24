@@ -22,7 +22,7 @@ class Role extends ORM
      * @var array
      */
     protected array $_has_many = [
-        'users' => ['model' => User::class, 'through' => 'roles_users'],
+        'users' => ['model' => User::class, 'through' => 'roles_users', 'foreign_key' => 'role_id'],
     ];
 
     /**

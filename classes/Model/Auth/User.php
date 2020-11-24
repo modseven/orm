@@ -29,7 +29,7 @@ class User extends ORM
      */
     protected array $_has_many = [
         'user_tokens' => ['model' => Token::class],
-        'roles'       => ['model' => Role::class, 'through' => 'roles_users'],
+        'roles'       => ['model' => Role::class, 'through' => 'roles_users', 'foreign_key' => 'user_id', 'far_key' => 'role_id'],
     ];
 
     /**
