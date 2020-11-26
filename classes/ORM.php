@@ -123,7 +123,7 @@ class ORM extends Model implements serializable
      * Sorting parameter
      * @var array
      */
-    protected array $_sorting;
+    protected array $_sorting = [];
 
     /**
      * Foreign key suffix
@@ -455,9 +455,9 @@ class ORM extends Model implements serializable
     {
         // Build the validation object with its rules
         $this->_validation = Validation::factory($this->_object)
-                                       ->bind(':model', $this)
-                                       ->bind(':original_values', $this->_original_values)
-                                       ->bind(':changed', $this->_changed);
+            ->bind(':model', $this)
+            ->bind(':original_values', $this->_original_values)
+            ->bind(':changed', $this->_changed);
 
         foreach ($this->rules() as $field => $rules)
         {
@@ -553,8 +553,8 @@ class ORM extends Model implements serializable
         // Only reload the object if we have one to reload
         if ($this->_loaded) {
             return $this->clear()
-                        ->where($this->_object_name . '.' . $this->_primary_key, '=', $primary_key)
-                        ->find();
+                ->where($this->_object_name . '.' . $this->_primary_key, '=', $primary_key)
+                ->find();
         }
 
         return $this->clear();
@@ -570,10 +570,10 @@ class ORM extends Model implements serializable
     public function __isset(string $column) : bool
     {
         return (isset($this->_object[$column]) OR
-                isset($this->_related[$column]) OR
-                isset($this->_has_one[$column]) OR
-                isset($this->_belongs_to[$column]) OR
-                isset($this->_has_many[$column]));
+            isset($this->_related[$column]) OR
+            isset($this->_has_one[$column]) OR
+            isset($this->_belongs_to[$column]) OR
+            isset($this->_has_many[$column]));
     }
 
     /**
@@ -663,7 +663,7 @@ class ORM extends Model implements serializable
         // Initialize model
         $this->_initialize();
 
-        foreach (unserialize($data, null) as $name => $var)
+        foreach (unserialize($data) as $name => $var)
         {
             $this->{$name} = $var;
         }
@@ -1631,9 +1631,9 @@ class ORM extends Model implements serializable
         try
         {
             $result = DB::insert($this->_table_name)
-                        ->columns(array_keys($data))
-                        ->values(array_values($data))
-                        ->execute($this->_db);
+                ->columns(array_keys($data))
+                ->values(array_values($data))
+                ->execute($this->_db);
         }
         catch (\Modseven\Exception|\Modseven\Database\Exception $e)
         {
@@ -1722,9 +1722,9 @@ class ORM extends Model implements serializable
         // Update a single record
         try {
             DB::update($this->_table_name)
-              ->set($data)
-              ->where($this->_primary_key, '=', $id)
-              ->execute($this->_db);
+                ->set($data)
+                ->where($this->_primary_key, '=', $id)
+                ->execute($this->_db);
         }
         catch (\Modseven\Exception $e)
         {
@@ -1788,8 +1788,8 @@ class ORM extends Model implements serializable
         // Delete the object
         try {
             DB::delete($this->_table_name)
-              ->where($this->_primary_key, '=', $id)
-              ->execute($this->_db);
+                ->where($this->_primary_key, '=', $id)
+                ->execute($this->_db);
         }
         catch (\Modseven\Exception $e)
         {
@@ -1864,9 +1864,9 @@ class ORM extends Model implements serializable
         {
             try{
                 return (int)DB::select([DB::expr('COUNT(*)'), 'records_found'])
-                              ->from($this->_has_many[$alias]['through'])
-                              ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk())
-                              ->execute($this->_db)->get('records_found');
+                    ->from($this->_has_many[$alias]['through'])
+                    ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk())
+                    ->execute($this->_db)->get('records_found');
             }
             catch (\Modseven\Exception $e)
             {
@@ -1887,10 +1887,10 @@ class ORM extends Model implements serializable
         try
         {
             $count = (int)DB::select([DB::expr('COUNT(*)'), 'records_found'])
-                            ->from($this->_has_many[$alias]['through'])
-                            ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk())
-                            ->where($this->_has_many[$alias]['far_key'], 'IN', $far_keys)
-                            ->execute($this->_db)->get('records_found');
+                ->from($this->_has_many[$alias]['through'])
+                ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk())
+                ->where($this->_has_many[$alias]['far_key'], 'IN', $far_keys)
+                ->execute($this->_db)->get('records_found');
         }
         catch (\Modseven\Exception $e)
         {
@@ -1959,7 +1959,7 @@ class ORM extends Model implements serializable
         $far_keys = ($far_keys instanceof self) ? $far_keys->pk() : $far_keys;
 
         $query = DB::delete($this->_has_many[$alias]['through'])
-                   ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk());
+            ->where($this->_has_many[$alias]['foreign_key'], '=', $this->pk());
 
         if ($far_keys !== null) {
             // Remove all the relationships in the array
@@ -1982,7 +1982,7 @@ class ORM extends Model implements serializable
      * Count the number of records in the table.
      *
      * @return int
-     *            
+     *
      * @throws \Modseven\Exception
      */
     public function countAll() : int
@@ -2011,15 +2011,15 @@ class ORM extends Model implements serializable
         $this->_build(Database::SELECT);
 
         $records = $this->_db_builder->from([$this->_table_name, $this->_object_name])
-                                     ->select([
-                                             DB::expr('COUNT(' . $this->_db->quoteColumn($this->_object_name . '.' .
-                                                                                          $this->_primary_key
-                                                 ) . ')'
-                                             ), 'records_found'
-                                         ]
-                                     )
-                                     ->execute($this->_db)
-                                     ->get('records_found');
+            ->select([
+                    DB::expr('COUNT(' . $this->_db->quoteColumn($this->_object_name . '.' .
+                            $this->_primary_key
+                        ) . ')'
+                    ), 'records_found'
+                ]
+            )
+            ->execute($this->_db)
+            ->get('records_found');
 
         // Add back in selected columns
         $this->_db_pending += $selects;
@@ -2836,8 +2836,8 @@ class ORM extends Model implements serializable
     public function unique(string $field, $value) : bool
     {
         $model = self::factory(static::class)
-                    ->where($field, '=', $value)
-                    ->find();
+            ->where($field, '=', $value)
+            ->find();
 
         if ($this->loaded()) {
             return ( ! ($model->loaded() AND $model->pk() !== $this->pk()));
