@@ -32,6 +32,7 @@
     "ext-pdo": "*",
     "ext-ctype": "*",
     "ext-mysqli": "*",
+    "ext-json": "*",
     "modseven/core": "*",
     "modseven/database": "*",
     "modseven/auth" : "*"

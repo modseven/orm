@@ -18,12 +18,15 @@ use Modseven\ORM\Model\Auth\User;
 
 class Token extends ORM
 {
+
+    protected string $_table_name = 'user_tokens';
+
     /**
      * Belongs to
      * @var array
      */
     protected array $_belongs_to = [
-        'user' => ['model' => User::class],
+        'user' => ['model' => User::class, 'foreign_key' => 'user_id'],
     ];
 
     /**

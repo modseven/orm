@@ -14,12 +14,15 @@ use Modseven\ORM\ORM;
 
 class Role extends ORM
 {
+
+    protected string $_table_name = 'roles';
+
     /**
      * Relationships
      * @var array
      */
     protected array $_has_many = [
-        'users' => ['model' => User::class, 'through' => 'roles_users'],
+        'users' => ['model' => User::class, 'through' => 'roles_users', 'foreign_key' => 'role_id'],
     ];
 
     /**
