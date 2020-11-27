@@ -21,6 +21,7 @@ use Modseven\ORM\Model\Auth\User\Token;
 
 class ORM extends Auth
 {
+    
     /**
      * Checks if a session is active.
      *
@@ -51,7 +52,7 @@ class ORM extends Auth
             if (is_array($role))
             {
                 // Get all the roles
-                $roles = \Modseven\ORM\ORM::factory(Role::class)
+                $roles = \Modseven\ORM\ORM::factory($this->classRole())
                             ->where('name', 'IN', $role)
                             ->findAll()
                             ->asArray(null, 'id');
@@ -65,7 +66,7 @@ class ORM extends Auth
             elseif ( ! is_object($role))
             {
                 // Load the role
-                $roles = \Modseven\ORM\ORM::factory(Role::class, ['name' => $role]);
+                $roles = \Modseven\ORM\ORM::factory($this->classRole(), ['name' => $role]);
 
                 if ( ! $roles->loaded())
                 {
@@ -101,7 +102,7 @@ class ORM extends Auth
             $username = $user;
 
             // Load the user
-            $user = \Modseven\ORM\ORM::factory(User::class);
+            $user = \Modseven\ORM\ORM::factory($this->classUser());
             $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
@@ -109,7 +110,7 @@ class ORM extends Auth
         $password = $this->hash($password);
 
         // If the passwords match, perform a login
-        if ($user->password === $password && $user->has('roles', \Modseven\ORM\ORM::factory(Role::class, ['name' => 'login'])))
+        if ($user->password === $password && $user->has('roles', \Modseven\ORM\ORM::factory($this->classRole(), ['name' => 'login'])))
         {
             if ($remember === true)
             {
@@ -121,7 +122,7 @@ class ORM extends Auth
                 ];
 
                 // Create a new autologin token
-                $token = \Modseven\ORM\ORM::factory(Token::class)
+                $token = \Modseven\ORM\ORM::factory($this->classToken())
                             ->values($data)
                             ->create();
 
@@ -151,7 +152,7 @@ class ORM extends Auth
             $username = $user;
 
             // Load the user
-            $user = \Modseven\ORM\ORM::factory(User::class);
+            $user = \Modseven\ORM\ORM::factory($this->classUser());
             $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
@@ -176,7 +177,7 @@ class ORM extends Auth
         if ($token = Cookie::get('authautologin'))
         {
             // Load the token and user
-            $token = \Modseven\ORM\ORM::factory(Token::class, ['token' => $token]);
+            $token = \Modseven\ORM\ORM::factory($this->classToken(), ['token' => $token]);
 
             if ($token->loaded() && $token->user->loaded())
             {
@@ -247,12 +248,12 @@ class ORM extends Auth
             Cookie::delete('authautologin');
 
             // Clear the autologin token from the database
-            $token = \Modseven\ORM\ORM::factory(Token::class, ['token' => $token]);
+            $token = \Modseven\ORM\ORM::factory($this->classToken(), ['token' => $token]);
 
             if ($logout_all && $token->loaded())
             {
                 // Delete all user tokens. This isn't the most elegant solution but does the job
-                $tokens =  \Modseven\ORM\ORM::factory(Token::class)->where('user_id', '=', $token->user_id)->findAll();
+                $tokens =  \Modseven\ORM\ORM::factory($this->classToken())->where('user_id', '=', $token->user_id)->findAll();
 
                 foreach ($tokens as $_token)
                 {
@@ -282,7 +283,7 @@ class ORM extends Auth
             $username = $user;
 
             // Load the user
-            $user = \Modseven\ORM\ORM::factory(User::class);
+            $user = \Modseven\ORM\ORM::factory($this->classUser());
             $user->where($user->uniqueKey($username), '=', $username)->find();
         }
 
@@ -324,4 +325,21 @@ class ORM extends Auth
 
         return hash_equals($this->hash($password), $user->password);
     }
+    
+    protected function classRole() : string
+    {
+        return $this->_config['classRole'];
+    }
+    
+    protected function classUser() : string
+    {
+        return $this->_config['classUser'];
+    }
+    
+    protected function classToken() : string
+    {
+        return $this->_config['classToken'];
+    }
+    
+    
 }
