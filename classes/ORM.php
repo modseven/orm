@@ -1444,11 +1444,11 @@ class ORM extends Model implements serializable
      * @param string $field The column name
      * @param mixed $value The value to filter
      *
-     * @return string
+     * @return ?string
      *
      * @throws Exception
      */
-    protected function runFilter(string $field, $value) : string
+    protected function runFilter(string $field, $value) : ?string
     {
         $filters = $this->filters();
 
