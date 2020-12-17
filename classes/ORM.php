@@ -1643,7 +1643,8 @@ class ORM extends Model implements serializable
         if ( ! array_key_exists($this->_primary_key, $data) || ($this->_object[$this->_primary_key] === null))
         {
             // Load the insert id as the primary key if it was left out
-            $this->_object[$this->_primary_key] = $this->_primary_key_value = $result[0];
+            // XXX: Hotfix: cast to string, because on loaded object it is string
+            $this->_object[$this->_primary_key] = $this->_primary_key_value = (string)$result[0];
         }
         else
         {
