@@ -2125,14 +2125,15 @@ class ORM extends Model implements serializable
     /**
      * Unserialize a value
      *
-     * @param string $value
+     * @param string|null $value
      *
-     * @return array
+     * @return array|bool|null
      *
      * @throws Exception
      */
-    protected function _unserializeValue(string $value) : array
+    protected function _unserializeValue(?string $value)
     {
+        $json = null;
         try
         {
             $json = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
