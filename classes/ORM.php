@@ -2136,7 +2136,10 @@ class ORM extends Model implements serializable
         $json = null;
         try
         {
-            $json = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            // json throws error on null
+            if($value) {
+                $json = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            }
         }
         catch (JsonException $e)
         {
