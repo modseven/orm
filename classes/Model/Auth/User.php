@@ -101,7 +101,7 @@ class User extends ORM
     {
         if ($this->_loaded) {
             // Update the number of logins
-            $this->logins = new Exception('logins + 1');
+            $this->logins = $this->logins + 1;
 
             // Set the last login date
             $this->last_login = time();
